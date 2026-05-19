@@ -1,0 +1,30 @@
+@import "tailwindcss" source(none);
+
+@source "../app/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../components/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../lib/**/*.{js,ts,jsx,tsx,mdx}";
+
+@import "tw-animate-css";
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #f8f8fd;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #3d35a8;
+    border-radius: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #00bcef;
+  }
+}

@@ -1,0 +1,523 @@
+"use client";
+
+import { useMemo, useState, useSyncExternalStore } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { Pencil, X, Plus, Trash2, CheckCircle, Star, Table2, CreditCard, GripVertical } from "lucide-react";
+import { adminSeed, ds, subscribeAdminChanges, type AdminPricing, type ComparisonRow } from "@/lib/admin/adminData";
+
+// ─── Value Cell Display ────────────────────────────────────────────────────
+function ValueBadge({ val }: { val: boolean | string }) {
+  if (val === true) return <CheckCircle size={15} className="text-[#00BCEF] mx-auto" />;
+  if (val === false) return <div className="w-4 h-0.5 bg-gray-200 mx-auto rounded" />;
+  return <span className="text-xs text-[#3D35A8] font-medium bg-[#3D35A8]/10 px-2 py-0.5 rounded-full whitespace-nowrap">{val}</span>;
+}
+
+// ─── Value Type Selector (for comparison row editing) ─────────────────────
+function ValueEditor({ value, onChange, label }: { value: boolean | string; onChange: (v: boolean | string) => void; label: string }) {
+  const type = value === true ? "yes" : value === false ? "no" : "custom";
+  const customText = typeof value === "string" ? value : "";
+
+  return (
+    <div>
+      <p className="text-xs font-semibold text-gray-500 mb-1.5">{label}</p>
+      <div className="flex gap-1.5 mb-1.5">
+        {[
+          { key: "yes", label: "✓" },
+          { key: "no", label: "–" },
+          { key: "custom", label: "Teks" },
+        ].map((opt) => (
+          <button
+            key={opt.key}
+            type="button"
+            onClick={() => {
+              if (opt.key === "yes") onChange(true);
+              else if (opt.key === "no") onChange(false);
+              else onChange(customText || "");
+            }}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${type === opt.key ? "bg-[#3D35A8] text-white border-[#3D35A8]" : "bg-white text-gray-500 border-slate-200 hover:border-[#3D35A8]"}`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+      {type === "custom" && (
+        <input value={customText} onChange={(e) => onChange(e.target.value)} placeholder="misal: Singkat, Opsional, 1x..." className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs outline-none focus:border-[#3D35A8]" />
+      )}
+    </div>
+  );
+}
+
+// ─── Edit Plan Modal ─────────────────────────────────────────────────────
+function EditPlanModal({ plan, onSave, onClose }: { plan: AdminPricing; onSave: (d: AdminPricing) => void; onClose: () => void }) {
+  const [form, setForm] = useState<AdminPricing>({
+    ...plan,
+    features: plan.features ?? [],
+    notIncluded: plan.notIncluded ?? [],
+  });
+  const [newFeature, setNewFeature] = useState("");
+  const [newNotIncluded, setNewNotIncluded] = useState("");
+
+  const addFeature = () => {
+    if (!newFeature.trim()) return;
+    setForm({ ...form, features: [...(form.features ?? []), newFeature.trim()] });
+    setNewFeature("");
+  };
+  const removeFeature = (i: number) =>
+    setForm({
+      ...form,
+      features: (form.features ?? []).filter((_, idx) => idx !== i),
+    });
+
+  const addNotIncluded = () => {
+    if (!newNotIncluded.trim()) return;
+    setForm({
+      ...form,
+      notIncluded: [...(form.notIncluded ?? []), newNotIncluded.trim()],
+    });
+    setNewNotIncluded("");
+  };
+  const removeNotIncluded = (i: number) =>
+    setForm({
+      ...form,
+      notIncluded: (form.notIncluded ?? []).filter((_, idx) => idx !== i),
+    });
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="h-1 bg-gradient-to-r from-[#3D35A8] to-[#00BCEF] flex-shrink-0" />
+        <div className="p-6 overflow-y-auto">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-bold text-[#1C2237]">Edit Paket — {plan.name}</h3>
+            <button onClick={onClose} className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors">
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Nama Paket</label>
+                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-[#3D35A8]" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Harga</label>
+                <input
+                  value={form.price}
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  placeholder="Rp 350.000"
+                  className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-[#3D35A8]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Deskripsi Singkat</label>
+              <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-[#3D35A8]" />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Label / Badge (opsional)</label>
+              <input
+                value={form.badge}
+                onChange={(e) => setForm({ ...form, badge: e.target.value })}
+                placeholder="Paling Populer"
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-[#3D35A8]"
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input type="checkbox" checked={form.popular} onChange={(e) => setForm({ ...form, popular: e.target.checked })} id="popular" className="w-4 h-4 accent-[#3D35A8]" />
+              <label htmlFor="popular" className="text-sm text-gray-600">
+                Tandai sebagai paket paling populer
+              </label>
+            </div>
+
+            {/* Features Included */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-2">Fitur Termasuk ✓</label>
+              <div className="space-y-2 mb-3 max-h-40 overflow-y-auto">
+                {(form.features ?? []).map((f, i) => (
+                  <div key={i} className="flex items-center gap-2 p-2.5 bg-slate-50 rounded-xl">
+                    <CheckCircle size={13} className="text-[#00BCEF] flex-shrink-0" />
+                    <span className="text-sm text-gray-700 flex-1">{f}</span>
+                    <button onClick={() => removeFeature(i)} className="text-red-400 hover:text-red-600 transition-colors">
+                      <X size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={newFeature}
+                  onChange={(e) => setNewFeature(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addFeature()}
+                  placeholder="Tambah fitur termasuk..."
+                  className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-[#3D35A8]"
+                />
+                <button onClick={addFeature} className="w-9 h-9 rounded-xl bg-[#3D35A8]/10 text-[#3D35A8] flex items-center justify-center hover:bg-[#3D35A8]/20 transition-colors">
+                  <Plus size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Not Included */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-2">Fitur Tidak Termasuk ✗</label>
+              <div className="space-y-2 mb-3 max-h-32 overflow-y-auto">
+                {(form.notIncluded ?? []).map((f, i) => (
+                  <div key={i} className="flex items-center gap-2 p-2.5 bg-red-50 rounded-xl">
+                    <div className="w-3 h-3 rounded-full border-2 border-gray-300 flex-shrink-0" />
+                    <span className="text-sm text-gray-400 flex-1 line-through">{f}</span>
+                    <button onClick={() => removeNotIncluded(i)} className="text-red-400 hover:text-red-600 transition-colors">
+                      <X size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={newNotIncluded}
+                  onChange={(e) => setNewNotIncluded(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addNotIncluded()}
+                  placeholder="Tambah fitur tidak termasuk..."
+                  className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:border-[#3D35A8]"
+                />
+                <button onClick={addNotIncluded} className="w-9 h-9 rounded-xl bg-red-50 text-red-400 flex items-center justify-center hover:bg-red-100 transition-colors">
+                  <Plus size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <button onClick={onClose} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm text-gray-600 hover:bg-slate-50 transition-colors">
+              Batal
+            </button>
+            <button
+              onClick={() => {
+                onSave(form);
+                onClose();
+              }}
+              className="flex-1 py-2.5 bg-gradient-to-r from-[#3D35A8] to-[#00BCEF] text-white rounded-xl text-sm font-semibold"
+            >
+              Simpan
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── Edit Comparison Row Modal ───────────────────────────────────────────
+function EditRowModal({ row, planNames, onSave, onClose }: { row: ComparisonRow; planNames: string[]; onSave: (d: ComparisonRow) => void; onClose: () => void }) {
+  const [form, setForm] = useState<ComparisonRow>({
+    ...row,
+    values: planNames.map((_, i) => row.values[i] ?? false),
+  });
+
+  const setVal = (i: number, v: boolean | string) => {
+    const vals = [...form.values];
+    vals[i] = v;
+    setForm({ ...form, values: vals });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="h-1 bg-gradient-to-r from-[#3D35A8] to-[#00BCEF] flex-shrink-0" />
+        <div className="p-6 overflow-y-auto">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-bold text-[#1C2237]">Edit Baris Perbandingan</h3>
+            <button onClick={onClose} className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors">
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Nama Fitur</label>
+              <input
+                value={form.feature}
+                onChange={(e) => setForm({ ...form, feature: e.target.value })}
+                placeholder="contoh: Editing & Proofreading"
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-[#3D35A8]"
+              />
+            </div>
+
+            <div className="border border-slate-100 rounded-xl p-4 bg-slate-50">
+              <p className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Nilai per Paket</p>
+              <div className="space-y-3">
+                {planNames.map((name, i) => (
+                  <ValueEditor key={i} label={name} value={form.values[i] ?? false} onChange={(v) => setVal(i, v)} />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <button onClick={onClose} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm text-gray-600 hover:bg-slate-50 transition-colors">
+              Batal
+            </button>
+            <button
+              onClick={() => {
+                onSave(form);
+                onClose();
+              }}
+              className="flex-1 py-2.5 bg-gradient-to-r from-[#3D35A8] to-[#00BCEF] text-white rounded-xl text-sm font-semibold"
+            >
+              Simpan
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────
+export default function AdminPricingPage() {
+  const [tab, setTab] = useState<"plans" | "comparison">("plans");
+
+  const plans = useSyncExternalStore(
+    subscribeAdminChanges,
+    () => ds.pricing.all(),
+    () => adminSeed.pricing,
+  );
+
+  const rows = useSyncExternalStore(
+    subscribeAdminChanges,
+    () => ds.comparison.all(),
+    () => adminSeed.pricingComparison,
+  );
+
+  const [editingPlan, setEditingPlan] = useState<AdminPricing | null>(null);
+  const [editingRow, setEditingRow] = useState<ComparisonRow | null>(null);
+
+  const savePlan = (d: AdminPricing) => {
+    ds.pricing.update(d.id, {
+      name: d.name,
+      price: d.price,
+      description: d.description,
+      features: d.features ?? [],
+      notIncluded: d.notIncluded ?? [],
+      badge: d.badge,
+      popular: d.popular,
+    });
+  };
+
+  const saveRow = (d: ComparisonRow) => {
+    ds.comparison.update(d.id, { feature: d.feature, values: d.values });
+  };
+
+  const deleteRow = (id: string) => {
+    ds.comparison.del(id);
+  };
+
+  const addRow = () => {
+    const maxSort = rows.reduce((m, r) => Math.max(m, r.sortOrder), 0);
+    const newRow: Omit<ComparisonRow, "id"> = {
+      feature: "Fitur Baru",
+      values: plans.map(() => false),
+      sortOrder: maxSort + 10,
+    };
+    ds.comparison.add(newRow);
+  };
+
+  const planColors = useMemo(
+    () => [
+      { border: "border-[#8B7EC8]", header: "bg-slate-50" },
+      {
+        border: "border-[#3D35A8]",
+        header: "bg-gradient-to-br from-[#3D35A8] to-[#5B50C8]",
+      },
+      {
+        border: "border-[#00BCEF]",
+        header: "bg-gradient-to-br from-[#1C2237] to-[#2A1F5C]",
+      },
+    ],
+    [],
+  );
+
+  return (
+    <div className="p-6 lg:p-8">
+      {/* Header */}
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-[#1C2237]">Manajemen Pricing</h1>
+          <p className="text-sm text-gray-400 mt-0.5">Kelola paket harga dan tabel perbandingan</p>
+        </div>
+        {tab === "comparison" && (
+          <button onClick={addRow} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#3D35A8] to-[#00BCEF] text-white rounded-xl text-sm font-semibold shadow hover:shadow-md transition-shadow">
+            <Plus size={16} />
+            Tambah Baris
+          </button>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 bg-slate-100 p-1 rounded-xl w-fit">
+        <button onClick={() => setTab("plans")} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === "plans" ? "bg-white text-[#3D35A8] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+          <CreditCard size={15} />
+          Paket / Card
+        </button>
+        <button
+          onClick={() => setTab("comparison")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === "comparison" ? "bg-white text-[#3D35A8] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+        >
+          <Table2 size={15} />
+          Tabel Perbandingan
+        </button>
+      </div>
+
+      {/* ── TAB: PLANS ───────────────────────────────────────── */}
+      {tab === "plans" && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {plans.map((plan, i) => {
+            const nameKey = (plan.name ?? "").trim().toLowerCase();
+            const c =
+              nameKey === "standard" || nameKey.includes("standard")
+                ? planColors[1]
+                : nameKey === "premium" || nameKey.includes("premium")
+                  ? planColors[2]
+                  : nameKey === "basic" || nameKey.includes("basic")
+                    ? planColors[0]
+                    : planColors[i % planColors.length];
+
+            const isDark = c !== planColors[0];
+            return (
+              <motion.div key={plan.id} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className={`relative rounded-3xl border-2 ${c.border} overflow-hidden shadow-sm flex flex-col`}>
+                {plan.popular && (
+                  <div className="bg-gradient-to-r from-[#3D35A8] to-[#5B50C8] px-4 py-1.5 text-center">
+                    <span className="text-white text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-1">
+                      <Star size={11} fill="white" />
+                      {plan.badge || "Paling Populer"}
+                    </span>
+                  </div>
+                )}
+
+                <div className={`p-5 ${c.header} flex-1`}>
+                  {plan.badge && !plan.popular && <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-3 ${isDark ? "bg-white/20 text-white" : "bg-[#3D35A8]/10 text-[#3D35A8]"}`}>{plan.badge}</span>}
+                  <div className={`text-2xl font-bold mb-0.5 ${isDark ? "text-white" : "text-[#1C2237]"}`}>{plan.price}</div>
+                  <div className={`text-xs mb-1 ${isDark ? "text-white/50" : "text-gray-400"}`}>per naskah</div>
+                  <p className={`text-sm font-semibold mb-0.5 ${isDark ? "text-white" : "text-[#1C2237]"}`}>{plan.name}</p>
+                  <p className={`text-xs ${isDark ? "text-white/70" : "text-gray-500"}`}>{plan.description}</p>
+
+                  <ul className="mt-4 space-y-1.5">
+                    {(plan.features ?? []).slice(0, 5).map((f) => (
+                      <li key={f} className={`flex items-start gap-2 text-xs ${isDark ? "text-white/80" : "text-gray-600"}`}>
+                        <CheckCircle size={12} className="text-[#00BCEF] mt-0.5 flex-shrink-0" />
+                        {f}
+                      </li>
+                    ))}
+                    {(plan.features ?? []).length > 5 && <li className={`text-xs ${isDark ? "text-white/50" : "text-gray-400"}`}>+{(plan.features ?? []).length - 5} fitur lainnya...</li>}
+                  </ul>
+
+                  {(plan.notIncluded ?? []).length > 0 && (
+                    <div className={`mt-2 pt-2 border-t ${isDark ? "border-white/10" : "border-slate-100"}`}>
+                      {(plan.notIncluded ?? []).map((f) => (
+                        <div key={f} className={`flex items-start gap-2 text-xs opacity-50 mt-1 ${isDark ? "text-white/60" : "text-gray-400"}`}>
+                          <div className="w-3 h-3 rounded-full border border-current mt-0.5 flex-shrink-0" />
+                          <span className="line-through">{f}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className={`px-5 pb-5 pt-3 ${c.header}`}>
+                  <button
+                    onClick={() => setEditingPlan(plan)}
+                    className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isDark ? "border border-white/20 bg-white/10 text-white hover:bg-white/15" : "border border-slate-200 bg-white text-[#3D35A8] hover:bg-[#3D35A8]/5"}`}
+                  >
+                    <Pencil size={14} />
+                    Edit Paket {plan.name}
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── TAB: COMPARISON TABLE ────────────────────────────── */}
+      {tab === "comparison" && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl border border-[#E8E8EE] shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-[#F8F8FD] border-b border-[#E8E8EE]">
+                  <th className="text-left px-5 py-3.5 text-[#1C2237] font-semibold text-sm">Fitur</th>
+                  {plans.map((p) => (
+                    <th key={p.id} className="px-5 py-3.5 text-center text-sm">
+                      <span className={`font-bold ${p.popular || p.badge === "Paling Populer" ? "text-[#3D35A8]" : "text-[#1C2237]"}`}>{p.name}</span>
+                    </th>
+                  ))}
+                  <th className="px-5 py-3.5 text-center text-sm text-gray-400 font-medium w-24">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => (
+                  <motion.tr key={row.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className={`group ${i % 2 === 0 ? "bg-white" : "bg-[#FAFAFA]"} hover:bg-[#F0EEFF] transition-colors`}>
+                    <td className="px-5 py-3 text-gray-700 text-sm font-medium border-t border-[#E8E8EE]">
+                      <div className="flex items-center gap-2">
+                        <GripVertical size={14} className="text-gray-300" />
+                        {row.feature}
+                      </div>
+                    </td>
+                    {plans.map((_, pi) => (
+                      <td key={pi} className="px-5 py-3 text-center border-t border-[#E8E8EE]">
+                        <div className="flex justify-center">
+                          <ValueBadge val={row.values[pi] ?? false} />
+                        </div>
+                      </td>
+                    ))}
+                    <td className="px-5 py-3 border-t border-[#E8E8EE]">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button onClick={() => setEditingRow(row)} className="w-7 h-7 rounded-lg bg-[#3D35A8]/10 text-[#3D35A8] flex items-center justify-center hover:bg-[#3D35A8]/20 transition-colors" title="Edit">
+                          <Pencil size={12} />
+                        </button>
+                        <button onClick={() => deleteRow(row.id)} className="w-7 h-7 rounded-lg bg-red-50 text-red-400 flex items-center justify-center hover:bg-red-100 transition-colors" title="Hapus">
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {rows.length === 0 && (
+            <div className="py-16 text-center">
+              <Table2 size={32} className="text-gray-200 mx-auto mb-3" />
+              <p className="text-gray-400 text-sm">Belum ada baris. Klik &quot;Tambah Baris&quot; untuk memulai.</p>
+            </div>
+          )}
+
+          <div className="p-4 border-t border-[#E8E8EE] bg-[#FAFAFA] flex items-center justify-between">
+            <span className="text-xs text-gray-400">{rows.length} baris perbandingan</span>
+            <button onClick={addRow} className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#3D35A8] bg-[#3D35A8]/10 rounded-lg hover:bg-[#3D35A8]/20 transition-colors">
+              <Plus size={13} />
+              Tambah Baris
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Note */}
+      <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+        <p className="text-sm text-amber-700">
+          <strong>Catatan:</strong> Semua perubahan di sini akan langsung tercermin di halaman Pricing publik Syntara.
+        </p>
+      </div>
+
+      {/* Modals */}
+      <AnimatePresence>
+        {editingPlan && <EditPlanModal plan={editingPlan} onSave={savePlan} onClose={() => setEditingPlan(null)} />}
+        {editingRow && <EditRowModal row={editingRow} planNames={plans.map((p) => p.name)} onSave={saveRow} onClose={() => setEditingRow(null)} />}
+      </AnimatePresence>
+    </div>
+  );
+}
