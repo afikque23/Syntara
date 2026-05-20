@@ -56,6 +56,31 @@ type PublicFaq = {
   category: string;
 };
 
+type PublicHero = {
+  badge: string;
+  heading: string;
+  headingHighlight: string;
+  headingSuffix: string;
+  description: string;
+  ctaText: string;
+  ctaLink: string;
+  secondaryCtaText: string;
+  secondaryCtaLink: string;
+  image: string;
+  stat1Value: string;
+  stat1Label: string;
+  stat2Value: string;
+  stat2Label: string;
+  stat3Value: string;
+  stat3Label: string;
+  stat4Value: string;
+  stat4Label: string;
+  featuresBadge: string;
+  featuresTitle: string;
+  featuresSubtitle: string;
+  featuresItems: { icon: string; title: string; desc: string }[];
+};
+
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
 }
@@ -132,6 +157,7 @@ function avatarFromName(name: string): string {
 }
 
 function iconFromName(raw: string): LucideIcon | null {
+  if (!raw || typeof raw !== "string") return null;
   const key = raw.trim().toLowerCase();
   if (!key) return null;
 
@@ -141,6 +167,12 @@ function iconFromName(raw: string): LucideIcon | null {
     globe: Globe,
     messagesquare: MessageSquare,
     send: Send,
+    zap: Zap,
+    shield: Shield,
+    users: Users,
+    trendingup: TrendingUp,
+    checkcircle: CheckCircle,
+    package: Package,
   };
   return map[key] ?? null;
 }
@@ -207,7 +239,7 @@ const fallbackTestimonials = [
   },
 ];
 
-const stats = [
+const fallbackStats = [
   { value: "500+", label: "Jurnal Dipublikasikan" },
   { value: "300+", label: "Klien Puas" },
   { value: "98%", label: "Tingkat Keberhasilan" },
@@ -365,6 +397,25 @@ export default function Home() {
 
   const [faqItems, setFaqItems] = useState(fallbackFaqItems);
 
+  const [heroData, setHeroData] = useState<PublicHero | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/hero", { cache: "no-store" });
+        if (!res.ok) return;
+        const json = (await res.json()) as PublicHero;
+        if (alive && json && typeof json === "object") setHeroData(json);
+      } catch {
+        // keep fallback
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -482,6 +533,13 @@ export default function Home() {
     };
   }, []);
 
+  const currentStats = heroData ? [
+    { value: heroData.stat1Value, label: heroData.stat1Label },
+    { value: heroData.stat2Value, label: heroData.stat2Label },
+    { value: heroData.stat3Value, label: heroData.stat3Label },
+    { value: heroData.stat4Value, label: heroData.stat4Label },
+  ] : fallbackStats;
+
   return (
     <div className="overflow-hidden">
       <section className="relative min-h-screen flex items-center bg-gradient-to-br from-[#0D1B2A] via-[#1C2237] to-[#2A1F5C] overflow-hidden">
@@ -522,40 +580,40 @@ export default function Home() {
             <div>
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="inline-flex items-center gap-2 px-4 py-2 bg-[#00BCEF]/20 border border-[#00BCEF]/30 rounded-full mb-6">
                 <span className="w-2 h-2 rounded-full bg-[#00BCEF] animate-pulse" />
-                <span className="text-[#00BCEF] text-sm font-medium">Platform Publikasi Jurnal #1 Indonesia</span>
+                <span className="text-[#00BCEF] text-sm font-medium">{heroData?.badge || "Platform Publikasi Jurnal #1 Indonesia"}</span>
               </motion.div>
 
               <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }} className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
-                Permudah{" "}
+                {heroData?.heading || "Permudah"}{" "}
                 <span className="relative">
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00BCEF] to-[#8B7EC8]">Publikasi</span>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00BCEF] to-[#8B7EC8]">{heroData?.headingHighlight || "Publikasi"}</span>
                   <motion.span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-[#00BCEF] to-[#8B7EC8]" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ delay: 0.8, duration: 0.5 }} />
                 </span>{" "}
-                Jurnal Anda
+                {heroData?.headingSuffix || "Jurnal Anda"}
               </motion.h1>
 
               <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }} className="text-white/70 text-lg md:text-xl leading-relaxed mb-8">
-                Syntara hadir sebagai mitra terpercaya dalam perjalanan publikasi jurnal ilmiah Anda. Dari editing hingga pendampingan submit — kami siap membantu dengan profesional.
+                {heroData?.description || "Syntara hadir sebagai mitra terpercaya dalam perjalanan publikasi jurnal ilmiah Anda. Dari editing hingga pendampingan submit — kami siap membantu dengan profesional."}
               </motion.p>
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.4 }} className="flex flex-wrap gap-4 mb-10">
                 <a
-                  href={waUrl}
+                  href={heroData?.ctaLink || waUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-7 py-4 bg-gradient-to-r from-[#3D35A8] to-[#00BCEF] text-white rounded-2xl font-semibold text-lg hover:shadow-2xl hover:shadow-[#3D35A8]/40 transition-all duration-300 hover:-translate-y-1"
                 >
-                  Konsultasi Sekarang
+                  {heroData?.ctaText || "Konsultasi Sekarang"}
                   <ArrowRight size={20} />
                 </a>
-                <Link href="/layanan" className="inline-flex items-center gap-2 px-7 py-4 bg-white/10 border border-white/20 text-white rounded-2xl font-semibold text-lg hover:bg-white/20 transition-all duration-300 backdrop-blur-sm">
-                  Lihat Layanan
+                <Link href={heroData?.secondaryCtaLink || "/layanan"} className="inline-flex items-center gap-2 px-7 py-4 bg-white/10 border border-white/20 text-white rounded-2xl font-semibold text-lg hover:bg-white/20 transition-all duration-300 backdrop-blur-sm">
+                  {heroData?.secondaryCtaText || "Lihat Layanan"}
                   <ChevronRight size={20} />
                 </Link>
               </motion.div>
 
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {stats.map((stat, i) => (
+                {currentStats.map((stat, i) => (
                   <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 + i * 0.1 }} className="text-center p-3 bg-white/5 border border-white/10 rounded-xl backdrop-blur-sm">
                     <div className="text-2xl font-bold text-[#00BCEF]">{stat.value}</div>
                     <div className="text-white/50 text-xs mt-1">{stat.label}</div>
@@ -596,26 +654,33 @@ export default function Home() {
 
       <section className="py-20 md:py-28 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <SectionHeader badge="Mengapa Syntara?" title="Solusi Terbaik untuk Publikasi Jurnal Anda" subtitle="Kami menggabungkan keahlian akademik dengan teknologi modern untuk hasil publikasi yang maksimal" />
+          <SectionHeader
+            badge={heroData?.featuresBadge || "Mengapa Syntara?"}
+            title={heroData?.featuresTitle || "Solusi Terbaik untuk Publikasi Jurnal Anda"}
+            subtitle={heroData?.featuresSubtitle || "Kami menggabungkan keahlian akademik dengan teknologi modern untuk hasil publikasi yang maksimal"}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {values.map((v, i) => (
-              <motion.div
-                key={v.title}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: i * 0.1 }}
-                whileHover={{ y: -8, boxShadow: "0 25px 50px rgba(61,53,168,0.15)" }}
-                className="group p-6 bg-[#F8F8FD] rounded-2xl border border-[#E8E8EE] cursor-pointer transition-all duration-300"
-              >
-                <div className="w-12 h-12 bg-gradient-to-br from-[#3D35A8] to-[#00BCEF] rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <v.icon size={22} className="text-white" />
-                </div>
-                <h3 className="font-bold text-[#1C2237] mb-2">{v.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{v.desc}</p>
-              </motion.div>
-            ))}
+            {(heroData?.featuresItems || values).map((v, i) => {
+              const Icon = typeof v.icon === "string" ? (iconFromName(v.icon) || Zap) : (v.icon || Zap);
+              return (
+                <motion.div
+                  key={v.title}
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: i * 0.1 }}
+                  whileHover={{ y: -8, boxShadow: "0 25px 50px rgba(61,53,168,0.15)" }}
+                  className="group p-6 bg-[#F8F8FD] rounded-2xl border border-[#E8E8EE] cursor-pointer transition-all duration-300"
+                >
+                  <div className="w-12 h-12 bg-gradient-to-br from-[#3D35A8] to-[#00BCEF] rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                    <Icon size={22} className="text-white" />
+                  </div>
+                  <h3 className="font-bold text-[#1C2237] mb-2">{v.title}</h3>
+                  <p className="text-gray-500 text-sm leading-relaxed">{v.desc}</p>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>

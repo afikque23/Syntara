@@ -4,11 +4,12 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
-import { LayoutDashboard, Inbox, Settings, BookOpen, Star, Package, Wrench, Users, LogOut, Menu, ExternalLink, Info, HelpCircle } from "lucide-react";
+import { LayoutDashboard, Inbox, Settings, BookOpen, Star, Package, Wrench, Users, LogOut, Menu, ExternalLink, Info, HelpCircle, LayoutTemplate } from "lucide-react";
 import { auth, bootstrapAdminData, ds, subscribeAdminChanges } from "@/lib/admin/adminData";
 
 const navItems = [
   { path: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: false },
+  { path: "/admin/hero", label: "Manajemen Hero", icon: LayoutTemplate, badge: false },
   { path: "/admin/requests", label: "Request & Leads", icon: Inbox, badge: false },
   { path: "/admin/services", label: "Manajemen Layanan", icon: Wrench, badge: false },
   { path: "/admin/pricing", label: "Manajemen Pricing", icon: Package, badge: false },

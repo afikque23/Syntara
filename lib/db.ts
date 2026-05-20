@@ -65,6 +65,7 @@ function getMariaDbConfigFromEnv(): {
   user?: string;
   password?: string;
   database?: string;
+  allowPublicKeyRetrieval?: boolean;
 } {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
@@ -74,6 +75,9 @@ function getMariaDbConfigFromEnv(): {
   const url = new URL(databaseUrl);
   const database = url.pathname.replace(/^\//, "") || undefined;
   const port = url.port ? Number(url.port) : undefined;
+  
+  // Extract allowPublicKeyRetrieval from URL search params if present, default to true
+  const allowPublicKeyRetrieval = url.searchParams.get("allowPublicKeyRetrieval") === "true" || true;
 
   return {
     host: url.hostname,
@@ -81,5 +85,6 @@ function getMariaDbConfigFromEnv(): {
     user: url.username ? decodeURIComponent(url.username) : undefined,
     password: url.password ? decodeURIComponent(url.password) : undefined,
     database,
+    allowPublicKeyRetrieval,
   };
 }

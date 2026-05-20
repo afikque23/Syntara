@@ -198,3 +198,31 @@ model SiteAbout {
   published Boolean  @default(true)
   updatedAt DateTime @updatedAt
 }
+
+model SiteHero {
+  id               String   @id @default("singleton")
+  badge            String   @default("Platform Publikasi Jurnal #1 Indonesia")
+  heading          String   @default("Permudah")
+  headingHighlight String   @default("Publikasi")
+  headingSuffix    String   @default("Jurnal Anda")
+  description      String   @default("Syntara hadir sebagai mitra terpercaya dalam perjalanan publikasi jurnal ilmiah Anda. Dari editing hingga pendampingan submit — kami siap membantu dengan profesional.")
+  ctaText          String   @default("Konsultasi Sekarang")
+  ctaLink          String   @default("/api/wa?text=Halo%2C+saya+ingin+konsultasi")
+  secondaryCtaText String   @default("Lihat Layanan")
+  secondaryCtaLink String   @default("/layanan")
+  image            String?  
+  stat1Value       String   @default("500+")
+  stat1Label       String   @default("Jurnal Dipublikasikan")
+  stat2Label       String   @default("Klien Puas")
+  stat3Value       String   @default("98%")
+  stat3Label       String   @default("Tingkat Keberhasilan")
+  stat4Value       String   @default("24/7")
+  stat4Label       String   @default("Dukungan Tim")
+  
+  featuresBadge    String   @default("Mengapa Syntara?")
+  featuresTitle    String   @default("Solusi Terbaik untuk Publikasi Jurnal Anda")
+  featuresSubtitle String   @default("Kami menggabungkan keahlian akademik dengan teknologi modern untuk hasil publikasi yang maksimal")
+  featuresItems    Json     @default("[{\"icon\":\"Zap\",\"title\":\"Proses Cepat\",\"desc\":\"Penyelesaian dalam 3-7 hari kerja dengan kualitas terjamin\"},{\"icon\":\"Shield\",\"title\":\"Harga Terjangkau\",\"desc\":\"Paket mulai dari harga yang ramah di kantong mahasiswa\"},{\"icon\":\"Users\",\"title\":\"Pendampingan Intensif\",\"desc\":\"Tim ahli siap membantu dari awal hingga jurnal diterima\"},{\"icon\":\"TrendingUp\",\"title\":\"Tingkat Keberhasilan Tinggi\",\"desc\":\"Lebih dari 500+ jurnal berhasil dipublikasikan\"}]")
+  
+  updatedAt        DateTime @updatedAt
+}
