@@ -74,7 +74,7 @@ export async function GET(req: Request) {
   ]);
 
   return NextResponse.json(
-    rows.map((p) => ({
+    rows.map((p: any) => ({
       ...p,
       features: Array.isArray(p.features) ? p.features : (p.features ?? []),
       notIncluded: Array.isArray(p.notIncluded) ? p.notIncluded : (p.notIncluded ?? []),

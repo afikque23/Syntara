@@ -30,7 +30,7 @@ export async function GET(req: Request) {
   });
 
   return NextResponse.json(
-    rows.map((p) => ({
+    rows.map((p: any) => ({
       ...p,
       features: normalizeFeatures(p.features),
       notIncluded: normalizeNotIncluded(p.notIncluded),
