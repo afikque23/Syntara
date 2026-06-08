@@ -78,14 +78,7 @@ export default function AdminLoginPage() {
               <p className="text-gray-400 text-sm mt-1">Masuk ke panel manajemen website</p>
             </div>
 
-            <div className="flex items-start gap-2.5 p-3.5 bg-[#3D35A8]/6 rounded-xl border border-[#3D35A8]/15 mb-6">
-              <AlertCircle size={15} className="text-[#3D35A8] mt-0.5 shrink-0" />
-              <div>
-                <p className="text-xs text-[#3D35A8] font-semibold mb-0.5">Demo Credentials</p>
-                <p className="text-xs text-gray-500">Email: admin@syntara.id</p>
-                <p className="text-xs text-gray-500">Password: syntara2024</p>
-              </div>
-            </div>
+
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
