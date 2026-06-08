@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json(
-    rows.map((r) => ({
+    rows.map((r: any) => ({
       id: r.id,
       title: r.title,
       excerpt: r.excerpt,

@@ -20,7 +20,7 @@ export async function GET(req: Request) {
   ]);
 
   return NextResponse.json(
-    rows.map((r) => ({
+    rows.map((r: any) => ({
       id: r.id,
       name: r.name,
       whatsapp: r.whatsapp,

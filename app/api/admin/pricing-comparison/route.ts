@@ -75,7 +75,7 @@ export async function GET(req: Request) {
   ]);
 
   return NextResponse.json(
-    rows.map((r) => ({
+    rows.map((r: any) => ({
       ...r,
       values: normalizeValues(r.values),
     })),
