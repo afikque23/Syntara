@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
 }
 
 enum RequestStatus {
@@ -159,7 +159,7 @@ model AdminBlog {
   id        String   @id @default(cuid())
   title     String
   excerpt   String
-  content   String?  @db.LongText
+  content   String?  @db.Text
   category  String
   date      DateTime @db.Date
   readTime  String

@@ -1,13 +1,24 @@
-import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
 };
 
 function createPrismaClient() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL is required to initialize Prisma.");
+  }
+  
+  const pool = new Pool({
+    connectionString,
+  });
+  const adapter = new PrismaPg(pool);
+  
   return new PrismaClient({
-    adapter: new PrismaMariaDb(getMariaDbConfigFromEnv()),
+    adapter,
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 }
@@ -59,32 +70,3 @@ export const prisma: PrismaClient =
         },
       }) as PrismaClient);
 
-function getMariaDbConfigFromEnv(): {
-  host: string;
-  port?: number;
-  user?: string;
-  password?: string;
-  database?: string;
-  allowPublicKeyRetrieval?: boolean;
-} {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL is required to initialize Prisma.");
-  }
-
-  const url = new URL(databaseUrl);
-  const database = url.pathname.replace(/^\//, "") || undefined;
-  const port = url.port ? Number(url.port) : undefined;
-  
-  // Extract allowPublicKeyRetrieval from URL search params if present, default to true
-  const allowPublicKeyRetrieval = url.searchParams.get("allowPublicKeyRetrieval") === "true" || true;
-
-  return {
-    host: url.hostname,
-    port: Number.isFinite(port) ? port : undefined,
-    user: url.username ? decodeURIComponent(url.username) : undefined,
-    password: url.password ? decodeURIComponent(url.password) : undefined,
-    database,
-    allowPublicKeyRetrieval,
-  };
-}
