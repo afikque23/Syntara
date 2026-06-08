@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     ...(take !== undefined ? { take } : {}),
   });
 
-  const normalized = rows.map((row) => ({
+  const normalized = rows.map((row: any) => ({
     ...row,
     features: normalizeFeatures(row.features),
     previewFeatures: normalizeFeatures((row as unknown as { previewFeatures?: unknown }).previewFeatures),
