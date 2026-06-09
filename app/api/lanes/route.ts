@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 function parseLimit(url: URL): number | undefined {
   const raw = url.searchParams.get("limit");
   if (!raw) return undefined;
