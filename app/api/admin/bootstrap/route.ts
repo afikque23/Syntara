@@ -88,17 +88,6 @@ export async function POST(req: Request) {
       });
     }
 
-    if ((await prisma.adminPricingComparisonRow.count()) === 0 && adminSeed.pricingComparison.length > 0) {
-      await prisma.adminPricingComparisonRow.createMany({
-        data: adminSeed.pricingComparison.map((r) => ({
-          id: r.id,
-          feature: r.feature,
-          values: r.values,
-          sortOrder: r.sortOrder,
-        })),
-        skipDuplicates: true,
-      });
-    }
 
     if ((await prisma.adminTestimonial.count()) === 0) {
       await prisma.adminTestimonial.createMany({

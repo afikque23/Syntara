@@ -120,17 +120,6 @@ model AdminPublicationLane {
   updatedAt   DateTime @updatedAt
 }
 
-model AdminPricingComparisonRow {
-  id        String   @id @default(cuid())
-  feature   String
-  values    Json
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([sortOrder])
-  @@index([createdAt])
-}
 
 model AdminTestimonial {
   id          String   @id @default(cuid())

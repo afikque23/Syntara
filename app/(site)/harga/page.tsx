@@ -131,7 +131,6 @@ export default function Pricing() {
   const [faqs, setFaqs] = useState<{ q: string; a: string }[]>([]);
   const [plans, setPlans] = useState<UiPlan[]>([]);
   const [lanes, setLanes] = useState<PublicLane[]>([]);
-  const [comparisonRows, setComparisonRows] = useState<PublicComparisonRow[]>([]);
 
   // Order Modal State
   const [selectedPlan, setSelectedPlan] = useState<UiPlan | null>(null);
@@ -200,20 +199,7 @@ export default function Pricing() {
     return () => { alive = false; };
   }, []);
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const res = await fetch("/api/pricing-comparison", { cache: "no-store" });
-        if (!res.ok) return;
-        const json = (await res.json()) as unknown;
-        if (!Array.isArray(json)) return;
-        const normalized = json.map(normalizeComparisonRow).filter((r): r is PublicComparisonRow => r !== null);
-        if (alive) setComparisonRows(normalized);
-      } catch { }
-    })();
-    return () => { alive = false; };
-  }, []);
+
 
   useEffect(() => {
     let alive = true;
@@ -334,51 +320,7 @@ export default function Pricing() {
         </div>
       </section>
 
-      <section className="py-16 md:py-24 bg-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <SectionHeader badge="Perbandingan" title="Apa yang Termasuk di Setiap Paket?" />
 
-          {comparisonRows.length === 0 ? (
-            <div className="py-10 text-center text-gray-400 text-sm">Belum ada data perbandingan.</div>
-          ) : (
-            <div className="overflow-x-auto rounded-2xl border border-[#E8E8EE] shadow-sm">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-[#F8F8FD]">
-                    <th className="text-left px-6 py-4 text-[#1C2237] font-semibold text-sm">Fitur</th>
-                    {plans.map((p) => (
-                      <th key={p.id} className="px-6 py-4 text-center text-sm">
-                        <span className={`font-bold ${p.badge === "Paling Populer" ? "text-[#3D35A8]" : "text-[#1C2237]"}`}>{p.name}</span>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {comparisonRows.map((row, i) => (
-                    <tr key={row.id} className={i % 2 === 0 ? "bg-white" : "bg-[#FAFAFA]"}>
-                      <td className="px-6 py-3.5 text-gray-700 text-sm font-medium border-t border-[#E8E8EE]">{row.feature}</td>
-                      {plans.map((_, j) => {
-                        const val = row.values[j] ?? false;
-                        return (
-                          <td key={j} className="px-6 py-3.5 text-center border-t border-[#E8E8EE]">
-                            {val === true ? (
-                              <CheckCircle size={18} className="text-[#00BCEF] mx-auto" />
-                            ) : val === false ? (
-                              <div className="w-4 h-0.5 bg-gray-200 mx-auto" />
-                            ) : (
-                              <span className="text-xs text-[#3D35A8] font-medium bg-[#3D35A8]/10 px-2 py-0.5 rounded-full">{val}</span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </section>
 
       <section className="py-16 md:py-24 bg-[#F8F8FD]">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">

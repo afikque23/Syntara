@@ -49,14 +49,7 @@ export interface AdminPublicationLane {
   updatedAt?: string;
 }
 
-export type ComparisonValue = boolean | string;
 
-export interface ComparisonRow {
-  id: string;
-  feature: string;
-  values: ComparisonValue[];
-  sortOrder: number;
-}
 
 export interface AdminTestimonial {
   id: string;
@@ -326,19 +319,7 @@ const seedLanes: AdminPublicationLane[] = [
   { id: "3", name: "Fast Track", description: "Penyelesaian lebih cepat", priceAmount: 750000, priceText: "Rp 750.000", isActive: true }
 ];
 
-const seedPricingComparison: ComparisonRow[] = [
-  { id: "1", feature: "Editing & Proofreading", values: [true, true, true], sortOrder: 10 },
-  { id: "2", feature: "Academic Tone", values: ["Dasar", true, true], sortOrder: 20 },
-  { id: "3", feature: "Jumlah Revisi", values: ["1x", "2x", "Unlimited"], sortOrder: 30 },
-  { id: "4", feature: "Formatting Template", values: [false, true, true], sortOrder: 40 },
-  { id: "5", feature: "Sitasi & Referensi", values: ["Dasar", true, true], sortOrder: 50 },
-  { id: "6", feature: "Tabel & Gambar", values: [false, true, true], sortOrder: 60 },
-  { id: "7", feature: "Translasi", values: [false, false, "Opsional"], sortOrder: 70 },
-  { id: "8", feature: "Konsultasi Jurnal Target", values: [false, "Singkat", true], sortOrder: 80 },
-  { id: "9", feature: "Cover Letter", values: [false, false, true], sortOrder: 90 },
-  { id: "10", feature: "Pendampingan Submit", values: [false, false, true], sortOrder: 100 },
-  { id: "11", feature: "Revisi Reviewer", values: [false, false, true], sortOrder: 110 },
-];
+
 
 const seedTestimonials: AdminTestimonial[] = [
   {
@@ -474,7 +455,7 @@ export const adminSeed = {
   services: seedServices,
   pricing: seedPricing,
   lanes: seedLanes,
-  pricingComparison: seedPricingComparison,
+
   testimonials: seedTestimonials,
   faqs: seedFaqs,
   testimonialImages: seedTestimonialImages,
@@ -495,7 +476,7 @@ type State = {
   services: AdminService[];
   pricing: AdminPricing[];
   lanes: AdminPublicationLane[];
-  pricingComparison: ComparisonRow[];
+
   testimonials: AdminTestimonial[];
   faqs: AdminFaq[];
   testimonialImages: AdminTestimonialImage[];
@@ -531,7 +512,7 @@ const state: State = {
   services: seedServices,
   pricing: seedPricing,
   lanes: seedLanes,
-  pricingComparison: seedPricingComparison,
+
   testimonials: seedTestimonials,
   faqs: seedFaqs,
   testimonialImages: seedTestimonialImages,
@@ -1062,76 +1043,7 @@ export const ds = {
     },
   },
 
-  comparison: {
-    all: () => state.pricingComparison,
-    refresh: async () => {
-      if (!isBrowser()) return;
-      try {
-        const rows = await apiJson<unknown[]>("/api/admin/pricing-comparison", { method: "GET" });
-        set(
-          "pricingComparison",
-          rows
-            .map((row) => {
-              const r = (row ?? {}) as Record<string, unknown>;
-              const id = String(r.id ?? "");
-              const feature = String(r.feature ?? "").trim();
-              const valuesRaw = r.values;
-              const values = Array.isArray(valuesRaw)
-                ? valuesRaw
-                    .filter((x): x is boolean | string => typeof x === "boolean" || typeof x === "string")
-                    .map((x) => (typeof x === "string" ? x.trim() : x))
-                    .map((x) => (typeof x === "string" && !x ? false : x))
-                : [];
-              const sortOrder = typeof r.sortOrder === "number" && Number.isFinite(r.sortOrder) ? Math.floor(r.sortOrder) : 0;
 
-              if (!id || !feature) return null;
-              return { id, feature, values, sortOrder } satisfies ComparisonRow;
-            })
-            .filter((x): x is ComparisonRow => x !== null)
-            .sort((a, b) => a.sortOrder - b.sortOrder),
-        );
-      } catch {
-        // ignore
-      }
-    },
-    add: (d: Omit<ComparisonRow, "id">) => {
-      const optimistic: ComparisonRow = { ...d, id: `tmp_${Date.now()}` };
-      set(
-        "pricingComparison",
-        [...state.pricingComparison, optimistic].sort((a, b) => a.sortOrder - b.sortOrder),
-      );
-
-      void apiJson<ComparisonRow>("/api/admin/pricing-comparison", {
-        method: "POST",
-        body: JSON.stringify(d),
-      })
-        .then(() => ds.comparison.refresh())
-        .catch(() => ds.comparison.refresh());
-    },
-    update: (id: string, patch: Partial<ComparisonRow>) => {
-      set(
-        "pricingComparison",
-        state.pricingComparison.map((r) => (r.id === id ? { ...r, ...patch } : r)).sort((a, b) => a.sortOrder - b.sortOrder),
-      );
-      void apiJson(`/api/admin/pricing-comparison/${encodeURIComponent(id)}`, {
-        method: "PATCH",
-        body: JSON.stringify(patch),
-      })
-        .then(() => ds.comparison.refresh())
-        .catch(() => ds.comparison.refresh());
-    },
-    del: (id: string) => {
-      set(
-        "pricingComparison",
-        state.pricingComparison.filter((r) => r.id !== id),
-      );
-      void apiJson(`/api/admin/pricing-comparison/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-      })
-        .then(() => ds.comparison.refresh())
-        .catch(() => ds.comparison.refresh());
-    },
-  },
   testimonials: {
     all: () => state.testimonials,
     refresh: async () => {

@@ -5,47 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Pencil, X, Plus, Trash2, CheckCircle, Star, Table2, CreditCard, GripVertical, AlertTriangle, ArrowRight } from "lucide-react";
 import { adminSeed, ds, subscribeAdminChanges, type AdminPricing, type ComparisonRow, type AdminPublicationLane } from "@/lib/admin/adminData";
 
-// ─── Value Cell Display ────────────────────────────────────────────────────
-function ValueBadge({ val }: { val: boolean | string }) {
-  if (val === true) return <CheckCircle size={15} className="text-[#00BCEF] mx-auto" />;
-  if (val === false) return <div className="w-4 h-0.5 bg-gray-200 mx-auto rounded" />;
-  return <span className="text-xs text-[#3D35A8] font-medium bg-[#3D35A8]/10 px-2 py-0.5 rounded-full whitespace-nowrap">{val}</span>;
-}
 
-// ─── Value Type Selector (for comparison row editing) ─────────────────────
-function ValueEditor({ value, onChange, label }: { value: boolean | string; onChange: (v: boolean | string) => void; label: string }) {
-  const type = value === true ? "yes" : value === false ? "no" : "custom";
-  const customText = typeof value === "string" ? value : "";
-
-  return (
-    <div>
-      <p className="text-xs font-semibold text-gray-500 mb-1.5">{label}</p>
-      <div className="flex gap-1.5 mb-1.5">
-        {[
-          { key: "yes", label: "✓" },
-          { key: "no", label: "–" },
-          { key: "custom", label: "Teks" },
-        ].map((opt) => (
-          <button
-            key={opt.key}
-            type="button"
-            onClick={() => {
-              if (opt.key === "yes") onChange(true);
-              else if (opt.key === "no") onChange(false);
-              else onChange(customText || "");
-            }}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${type === opt.key ? "bg-[#3D35A8] text-white border-[#3D35A8]" : "bg-white text-gray-500 border-slate-200 hover:border-[#3D35A8]"}`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-      {type === "custom" && (
-        <input value={customText} onChange={(e) => onChange(e.target.value)} placeholder="misal: Singkat, Opsional, 1x..." className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs outline-none focus:border-[#3D35A8]" />
-      )}
-    </div>
-  );
-}
 
 // ─── Edit Plan Modal ─────────────────────────────────────────────────────
 function EditPlanModal({ plan, onSave, onClose }: { plan: AdminPricing | Omit<AdminPricing, "id">; onSave: (d: AdminPricing | Omit<AdminPricing, "id">) => void; onClose: () => void }) {
@@ -301,75 +261,11 @@ function EditLaneModal({ lane, onSave, onClose }: { lane: AdminPublicationLane |
   );
 }
 
-// ─── Edit Comparison Row Modal ───────────────────────────────────────────
-function EditRowModal({ row, planNames, onSave, onClose }: { row: ComparisonRow; planNames: string[]; onSave: (d: ComparisonRow) => void; onClose: () => void }) {
-  const [form, setForm] = useState<ComparisonRow>({
-    ...row,
-    values: planNames.map((_, i) => row.values[i] ?? false),
-  });
 
-  const setVal = (i: number, v: boolean | string) => {
-    const vals = [...form.values];
-    vals[i] = v;
-    setForm({ ...form, values: vals });
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
-        <div className="h-1 bg-gradient-to-r from-[#3D35A8] to-[#00BCEF] flex-shrink-0" />
-        <div className="p-6 overflow-y-auto">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="font-bold text-[#1C2237]">Edit Baris Perbandingan</h3>
-            <button onClick={onClose} className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors">
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Nama Fitur</label>
-              <input
-                value={form.feature}
-                onChange={(e) => setForm({ ...form, feature: e.target.value })}
-                placeholder="contoh: Editing & Proofreading"
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-[#3D35A8]"
-              />
-            </div>
-
-            <div className="border border-slate-100 rounded-xl p-4 bg-slate-50">
-              <p className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wider">Nilai per Paket</p>
-              <div className="space-y-3">
-                {planNames.map((name, i) => (
-                  <ValueEditor key={i} label={name} value={form.values[i] ?? false} onChange={(v) => setVal(i, v)} />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-3 mt-6">
-            <button onClick={onClose} className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm text-gray-600 hover:bg-slate-50 transition-colors">
-              Batal
-            </button>
-            <button
-              onClick={() => {
-                onSave(form);
-                onClose();
-              }}
-              className="flex-1 py-2.5 bg-gradient-to-r from-[#3D35A8] to-[#00BCEF] text-white rounded-xl text-sm font-semibold"
-            >
-              Simpan
-            </button>
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
 
 // ─── Main Page ───────────────────────────────────────────────────────────
 export default function AdminPricingPage() {
-  const [tab, setTab] = useState<"plans" | "lanes" | "comparison">("plans");
+  const [tab, setTab] = useState<"plans" | "lanes">("plans");
 
   const plans = useSyncExternalStore(
     subscribeAdminChanges,
@@ -383,15 +279,7 @@ export default function AdminPricingPage() {
     () => adminSeed.lanes,
   );
 
-  const rows = useSyncExternalStore(
-    subscribeAdminChanges,
-    () => ds.comparison.all(),
-    () => adminSeed.pricingComparison,
-  );
-
-  const [editingPlan, setEditingPlan] = useState<AdminPricing | Omit<AdminPricing, "id"> | null>(null);
   const [editingLane, setEditingLane] = useState<AdminPublicationLane | Omit<AdminPublicationLane, "id"> | null>(null);
-  const [editingRow, setEditingRow] = useState<ComparisonRow | null>(null);
 
   const savePlan = (d: AdminPricing | Omit<AdminPricing, "id">) => {
     if ("id" in d) {
@@ -421,25 +309,7 @@ export default function AdminPricingPage() {
     }
   };
 
-  const saveRow = (d: ComparisonRow) => {
-    ds.comparison.update(d.id, { feature: d.feature, values: d.values });
-  };
 
-  const deleteRow = (id: string) => {
-    if (confirm("Hapus baris ini?")) {
-      ds.comparison.del(id);
-    }
-  };
-
-  const addRow = () => {
-    const maxSort = rows.reduce((m, r) => Math.max(m, r.sortOrder), 0);
-    const newRow: Omit<ComparisonRow, "id"> = {
-      feature: "Fitur Baru",
-      values: plans.map(() => false),
-      sortOrder: maxSort + 10,
-    };
-    ds.comparison.add(newRow);
-  };
 
   const planColors = useMemo(
     () => [
@@ -462,7 +332,7 @@ export default function AdminPricingPage() {
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-[#1C2237]">Manajemen Pricing & Jalur</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Kelola paket harga, jalur publikasi, dan tabel perbandingan</p>
+          <p className="text-sm text-gray-400 mt-0.5">Kelola paket harga dan jalur publikasi</p>
         </div>
         {tab === "plans" && (
           <button onClick={() => setEditingPlan({ name: "Paket Baru", price: "Rp 0", priceAmount: 0, description: "Deskripsi paket", features: [], notIncluded: [], badge: "", popular: false, isActive: true })} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#3D35A8] to-[#00BCEF] text-white rounded-xl text-sm font-semibold shadow hover:shadow-md transition-shadow">
@@ -476,12 +346,7 @@ export default function AdminPricingPage() {
             Tambah Jalur
           </button>
         )}
-        {tab === "comparison" && (
-          <button onClick={addRow} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#3D35A8] to-[#00BCEF] text-white rounded-xl text-sm font-semibold shadow hover:shadow-md transition-shadow">
-            <Plus size={16} />
-            Tambah Baris
-          </button>
-        )}
+
       </div>
 
       {/* Tabs */}
@@ -494,13 +359,7 @@ export default function AdminPricingPage() {
           <ArrowRight size={15} />
           Jalur Publikasi
         </button>
-        <button
-          onClick={() => setTab("comparison")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === "comparison" ? "bg-white text-[#3D35A8] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-        >
-          <Table2 size={15} />
-          Tabel Perbandingan
-        </button>
+
       </div>
 
       {/* ── TAB: PLANS ───────────────────────────────────────── */}
@@ -638,62 +497,7 @@ export default function AdminPricingPage() {
         </motion.div>
       )}
 
-      {/* ── TAB: COMPARISON TABLE ────────────────────────────── */}
-      {tab === "comparison" && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-2xl border border-[#E8E8EE] shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-[#F8F8FD] border-b border-[#E8E8EE]">
-                  <th className="text-left px-5 py-3.5 text-[#1C2237] font-semibold text-sm">Fitur</th>
-                  {plans.map((p) => (
-                    <th key={p.id} className="px-5 py-3.5 text-center text-sm">
-                      <span className={`font-bold ${p.popular || p.badge === "Paling Populer" ? "text-[#3D35A8]" : "text-[#1C2237]"}`}>{p.name}</span>
-                    </th>
-                  ))}
-                  <th className="px-5 py-3.5 text-center text-sm text-gray-400 font-medium w-24">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, i) => (
-                  <motion.tr key={row.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className={`group ${i % 2 === 0 ? "bg-white" : "bg-[#FAFAFA]"} hover:bg-[#F0EEFF] transition-colors`}>
-                    <td className="px-5 py-3 text-gray-700 text-sm font-medium border-t border-[#E8E8EE]">
-                      <div className="flex items-center gap-2">
-                        <GripVertical size={14} className="text-gray-300" />
-                        {row.feature}
-                      </div>
-                    </td>
-                    {plans.map((_, pi) => (
-                      <td key={pi} className="px-5 py-3 text-center border-t border-[#E8E8EE]">
-                        <div className="flex justify-center">
-                          <ValueBadge val={row.values[pi] ?? false} />
-                        </div>
-                      </td>
-                    ))}
-                    <td className="px-5 py-3 border-t border-[#E8E8EE]">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button onClick={() => setEditingRow(row)} className="w-7 h-7 rounded-lg bg-[#3D35A8]/10 text-[#3D35A8] flex items-center justify-center hover:bg-[#3D35A8]/20 transition-colors" title="Edit">
-                          <Pencil size={12} />
-                        </button>
-                        <button onClick={() => deleteRow(row.id)} className="w-7 h-7 rounded-lg bg-red-50 text-red-400 flex items-center justify-center hover:bg-red-100 transition-colors" title="Hapus">
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
 
-          {rows.length === 0 && (
-            <div className="py-16 text-center">
-              <Table2 size={32} className="text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-400 text-sm">Belum ada baris. Klik "Tambah Baris" untuk memulai.</p>
-            </div>
-          )}
-        </motion.div>
-      )}
 
       {/* Note */}
       <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
@@ -706,7 +510,7 @@ export default function AdminPricingPage() {
       <AnimatePresence>
         {editingPlan && <EditPlanModal plan={editingPlan} onSave={savePlan} onClose={() => setEditingPlan(null)} />}
         {editingLane && <EditLaneModal lane={editingLane} onSave={saveLane} onClose={() => setEditingLane(null)} />}
-        {editingRow && <EditRowModal row={editingRow} planNames={plans.map((p) => p.name)} onSave={saveRow} onClose={() => setEditingRow(null)} />}
+
       </AnimatePresence>
     </div>
   );
