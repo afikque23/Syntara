@@ -3,7 +3,7 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Pencil, X, Plus, Trash2, CheckCircle, Star, Table2, CreditCard, GripVertical, AlertTriangle, ArrowRight } from "lucide-react";
-import { adminSeed, ds, subscribeAdminChanges, type AdminPricing, type ComparisonRow, type AdminPublicationLane } from "@/lib/admin/adminData";
+import { adminSeed, ds, subscribeAdminChanges, type AdminPricing, type AdminPublicationLane } from "@/lib/admin/adminData";
 
 
 
@@ -279,6 +279,7 @@ export default function AdminPricingPage() {
     () => adminSeed.lanes,
   );
 
+  const [editingPlan, setEditingPlan] = useState<AdminPricing | Omit<AdminPricing, "id"> | null>(null);
   const [editingLane, setEditingLane] = useState<AdminPublicationLane | Omit<AdminPublicationLane, "id"> | null>(null);
 
   const savePlan = (d: AdminPricing | Omit<AdminPricing, "id">) => {

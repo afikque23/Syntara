@@ -723,7 +723,6 @@ export const ds = {
       ds.services.refresh(),
       ds.pricing.refresh(),
       ds.lanes.refresh(),
-      ds.comparison.refresh(),
       ds.testimonials.refresh(),
       ds.faq.refresh(),
       ds.testimonialImages.refresh(),
