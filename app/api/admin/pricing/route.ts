@@ -20,9 +20,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { name, price, description, features, notIncluded, badge, popular } = (body ?? {}) as Record<string, unknown>;
+  const { name, price, priceAmount, description, features, notIncluded, badge, popular, isActive } = (body ?? {}) as Record<string, unknown>;
   if (typeof name !== "string" || !name.trim()) return NextResponse.json({ error: "name is required" }, { status: 400 });
   if (typeof price !== "string") return NextResponse.json({ error: "price is required" }, { status: 400 });
+  if (typeof priceAmount !== "number") return NextResponse.json({ error: "priceAmount is required" }, { status: 400 });
   if (typeof description !== "string") return NextResponse.json({ error: "description is required" }, { status: 400 });
   if (!isStringArray(features)) return NextResponse.json({ error: "features must be string[]" }, { status: 400 });
   if (notIncluded !== undefined && !isStringArray(notIncluded)) {
@@ -33,11 +34,13 @@ export async function POST(req: Request) {
     data: {
       name: name.trim(),
       price,
+      priceAmount,
       description,
       features,
       notIncluded: isStringArray(notIncluded) ? notIncluded : [],
       badge: typeof badge === "string" ? badge : "",
       popular: typeof popular === "boolean" ? popular : false,
+      isActive: typeof isActive === "boolean" ? isActive : true,
     },
   });
 

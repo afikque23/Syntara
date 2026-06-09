@@ -41,6 +41,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     data.badge = patch.badge.trim();
   }
   if (typeof patch.popular === "boolean") data.popular = patch.popular;
+  if (typeof patch.priceAmount === "number") data.priceAmount = patch.priceAmount;
+  if (typeof patch.isActive === "boolean") data.isActive = patch.isActive;
   if (patch.features !== undefined) {
     if (!isStringArray(patch.features)) return NextResponse.json({ error: "features must be string[]" }, { status: 400 });
     data.features = patch.features;

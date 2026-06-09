@@ -29,11 +29,24 @@ export interface AdminPricing {
   id: string;
   name: string;
   price: string;
+  priceAmount: number;
   description: string;
   features: string[];
   notIncluded?: string[];
   badge: string;
   popular: boolean;
+  isActive: boolean;
+}
+
+export interface AdminPublicationLane {
+  id: string;
+  name: string;
+  description: string;
+  priceAmount: number;
+  priceText: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type ComparisonValue = boolean | string;
@@ -263,26 +276,31 @@ const seedPricing: AdminPricing[] = [
     id: "1",
     name: "Basic",
     price: "Rp 350.000",
+    priceAmount: 350000,
     description: "Ideal untuk koreksi dasar & proofreading",
     features: ["Editing grammar & struktur", "Proofreading menyeluruh", "1x revisi gratis", "Feedback umum", "Estimasi 3–5 hari kerja"],
     notIncluded: ["Formatting template jurnal", "Translasi", "Konsultasi jurnal target"],
     badge: "",
     popular: false,
+    isActive: true,
   },
   {
     id: "2",
     name: "Standard",
     price: "Rp 750.000",
+    priceAmount: 750000,
     description: "Paket editing & formatting siap submit",
     features: ["Full editing & academic tone", "Formatting template jurnal", "Sitasi APA/IEEE/Vancouver", "Formatting tabel & gambar", "2x revisi gratis", "Konsultasi singkat", "Estimasi 5–7 hari kerja"],
     notIncluded: ["Translasi bahasa", "Pendampingan submit"],
     badge: "Paling Populer",
     popular: true,
+    isActive: true,
   },
   {
     id: "3",
     name: "Premium",
     price: "Rp 1.500.000",
+    priceAmount: 1500000,
     description: "Full service dari editing hingga jurnal diterima",
     features: [
       "Full editing & proofreading",
@@ -298,7 +316,14 @@ const seedPricing: AdminPricing[] = [
     notIncluded: [],
     badge: "Terlengkap",
     popular: false,
+    isActive: true,
   },
+];
+
+const seedLanes: AdminPublicationLane[] = [
+  { id: "1", name: "Biasa", description: "Penyelesaian sesuai antrian normal", priceAmount: 0, priceText: "Rp 0", isActive: true },
+  { id: "2", name: "Regular", description: "Prioritas standar", priceAmount: 350000, priceText: "Rp 350.000", isActive: true },
+  { id: "3", name: "Fast Track", description: "Penyelesaian lebih cepat", priceAmount: 750000, priceText: "Rp 750.000", isActive: true }
 ];
 
 const seedPricingComparison: ComparisonRow[] = [
@@ -448,6 +473,7 @@ export const adminSeed = {
   requests: seedRequests,
   services: seedServices,
   pricing: seedPricing,
+  lanes: seedLanes,
   pricingComparison: seedPricingComparison,
   testimonials: seedTestimonials,
   faqs: seedFaqs,
@@ -468,6 +494,7 @@ type State = {
   requests: AdminRequest[];
   services: AdminService[];
   pricing: AdminPricing[];
+  lanes: AdminPublicationLane[];
   pricingComparison: ComparisonRow[];
   testimonials: AdminTestimonial[];
   faqs: AdminFaq[];
@@ -503,6 +530,7 @@ const state: State = {
   requests: seedRequests,
   services: seedServices,
   pricing: seedPricing,
+  lanes: seedLanes,
   pricingComparison: seedPricingComparison,
   testimonials: seedTestimonials,
   faqs: seedFaqs,
@@ -713,6 +741,7 @@ export const ds = {
       ds.requests.refresh(),
       ds.services.refresh(),
       ds.pricing.refresh(),
+      ds.lanes.refresh(),
       ds.comparison.refresh(),
       ds.testimonials.refresh(),
       ds.faq.refresh(),
@@ -926,22 +955,34 @@ export const ds = {
               id: String(p.id),
               name: String(p.name ?? ""),
               price: String(p.price ?? ""),
+              priceAmount: typeof p.priceAmount === "number" ? p.priceAmount : 0,
               description: String(p.description ?? ""),
               features: Array.isArray(p.features) ? (p.features as unknown[]).map(String) : [],
               notIncluded: Array.isArray(p.notIncluded) ? (p.notIncluded as unknown[]).map(String) : [],
               badge: String(p.badge ?? ""),
               popular: !!p.popular,
+              isActive: typeof p.isActive === "boolean" ? p.isActive : true,
             };
-          }),
+          }).sort((a, b) => a.priceAmount - b.priceAmount),
         );
       } catch {
         // ignore
       }
     },
+    add: (d: Omit<AdminPricing, "id">) => {
+      const optimistic: AdminPricing = { ...d, id: `tmp_${Date.now()}` };
+      set("pricing", [...state.pricing, optimistic].sort((a, b) => a.priceAmount - b.priceAmount));
+      void apiJson("/api/admin/pricing", {
+        method: "POST",
+        body: JSON.stringify(d),
+      })
+        .then(() => ds.pricing.refresh())
+        .catch(() => ds.pricing.refresh());
+    },
     update: (id: string, patch: Partial<AdminPricing>) => {
       set(
         "pricing",
-        state.pricing.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+        state.pricing.map((p) => (p.id === id ? { ...p, ...patch } : p)).sort((a, b) => a.priceAmount - b.priceAmount),
       );
       void apiJson(`/api/admin/pricing/${encodeURIComponent(id)}`, {
         method: "PATCH",
@@ -950,47 +991,74 @@ export const ds = {
         .then(() => ds.pricing.refresh())
         .catch(() => ds.pricing.refresh());
     },
-    save: (next: AdminPricing[]) => {
-      const prev = state.pricing;
-      set("pricing", next);
-
-      const prevById = new Map(prev.map((p) => [p.id, p] as const));
-      const nextById = new Map(next.map((p) => [p.id, p] as const));
-
-      const toDelete = prev.filter((p) => !nextById.has(p.id));
-      const toUpsert = next;
-
-      void (async () => {
-        for (const d of toDelete) {
-          if (d.id.startsWith("tmp_")) continue;
-          await apiJson(`/api/admin/pricing/${encodeURIComponent(d.id)}`, { method: "DELETE" }).catch(() => {});
-        }
-
-        for (const p of toUpsert) {
-          const existed = prevById.has(p.id) && !p.id.startsWith("tmp_");
-          if (existed) {
-            await apiJson(`/api/admin/pricing/${encodeURIComponent(p.id)}`, {
-              method: "PATCH",
-              body: JSON.stringify(p),
-            }).catch(() => {});
-          } else {
-            await apiJson("/api/admin/pricing", {
-              method: "POST",
-              body: JSON.stringify({
-                name: p.name,
-                price: p.price,
-                description: p.description,
-                features: p.features,
-                notIncluded: p.notIncluded ?? [],
-                badge: p.badge,
-                popular: p.popular,
-              }),
-            }).catch(() => {});
-          }
-        }
-
-        await ds.pricing.refresh();
-      })();
+    del: (id: string) => {
+      set(
+        "pricing",
+        state.pricing.filter((p) => p.id !== id),
+      );
+      void apiJson(`/api/admin/pricing/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      })
+        .then(() => ds.pricing.refresh())
+        .catch(() => ds.pricing.refresh());
+    },
+  },
+  lanes: {
+    all: () => state.lanes,
+    refresh: async () => {
+      if (!isBrowser()) return;
+      try {
+        const rows = await apiJson<unknown[]>("/api/admin/lanes", { method: "GET" });
+        set(
+          "lanes",
+          rows.map((row) => {
+            const p = (row ?? {}) as Record<string, unknown>;
+            return {
+              id: String(p.id),
+              name: String(p.name ?? ""),
+              description: String(p.description ?? ""),
+              priceAmount: typeof p.priceAmount === "number" ? p.priceAmount : 0,
+              priceText: String(p.priceText ?? ""),
+              isActive: typeof p.isActive === "boolean" ? p.isActive : true,
+            };
+          }).sort((a, b) => a.priceAmount - b.priceAmount),
+        );
+      } catch {
+        // ignore
+      }
+    },
+    add: (d: Omit<AdminPublicationLane, "id" | "createdAt" | "updatedAt">) => {
+      const optimistic: AdminPublicationLane = { ...d, id: `tmp_${Date.now()}` };
+      set("lanes", [...state.lanes, optimistic].sort((a, b) => a.priceAmount - b.priceAmount));
+      void apiJson("/api/admin/lanes", {
+        method: "POST",
+        body: JSON.stringify(d),
+      })
+        .then(() => ds.lanes.refresh())
+        .catch(() => ds.lanes.refresh());
+    },
+    update: (id: string, patch: Partial<AdminPublicationLane>) => {
+      set(
+        "lanes",
+        state.lanes.map((p) => (p.id === id ? { ...p, ...patch } : p)).sort((a, b) => a.priceAmount - b.priceAmount),
+      );
+      void apiJson(`/api/admin/lanes/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+      })
+        .then(() => ds.lanes.refresh())
+        .catch(() => ds.lanes.refresh());
+    },
+    del: (id: string) => {
+      set(
+        "lanes",
+        state.lanes.filter((p) => p.id !== id),
+      );
+      void apiJson(`/api/admin/lanes/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      })
+        .then(() => ds.lanes.refresh())
+        .catch(() => ds.lanes.refresh());
     },
   },
 

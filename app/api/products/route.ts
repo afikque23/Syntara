@@ -25,7 +25,8 @@ export async function GET(req: Request) {
   const take = parseLimit(url);
 
   const rows = await prisma.adminPricing.findMany({
-    orderBy: { createdAt: "asc" },
+    where: { isActive: true },
+    orderBy: { priceAmount: "asc" },
     ...(take !== undefined ? { take } : {}),
   });
 

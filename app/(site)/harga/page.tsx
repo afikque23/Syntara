@@ -1,21 +1,30 @@
 "use client";
 
-import { motion } from "motion/react";
-import { CheckCircle, ArrowRight, Star, Zap } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { CheckCircle, ArrowRight, Star, Zap, X } from "lucide-react";
 import { SectionHeader } from "@/components/SectionHeader";
 import { useEffect, useMemo, useState } from "react";
 
-const waUrl = "/api/wa?text=Halo%2C+saya+tertarik+dengan+paket+";
+const waUrl = "/api/wa?text=";
 
 type PublicProduct = {
   id: string;
   name: string;
   price: string;
+  priceAmount: number;
   description: string;
   features: string[];
   notIncluded?: string[];
   badge: string;
   popular: boolean;
+};
+
+type PublicLane = {
+  id: string;
+  name: string;
+  description: string;
+  priceText: string;
+  priceAmount: number;
 };
 
 type UiPlan = {
@@ -28,6 +37,7 @@ type UiPlan = {
   textColor: string;
   buttonClass: string;
   price: string;
+  priceAmount: number;
   priceNote: string;
   description: string;
   features: string[];
@@ -57,6 +67,7 @@ function normalizeProduct(v: unknown): PublicProduct | null {
   const id = typeof v.id === "string" ? v.id : String(v.id ?? "");
   const name = typeof v.name === "string" ? v.name : String(v.name ?? "");
   const price = typeof v.price === "string" ? v.price : String(v.price ?? "");
+  const priceAmount = typeof v.priceAmount === "number" ? v.priceAmount : 0;
   const description = typeof v.description === "string" ? v.description : String(v.description ?? "");
   const badge = typeof v.badge === "string" ? v.badge : String(v.badge ?? "");
   const popular = Boolean(v.popular);
@@ -64,7 +75,18 @@ function normalizeProduct(v: unknown): PublicProduct | null {
   const notIncluded = Array.isArray(v.notIncluded) ? v.notIncluded.filter((x): x is string => typeof x === "string" && x.trim().length > 0) : [];
 
   if (!id || !name) return null;
-  return { id, name, price, description, features, notIncluded, badge, popular };
+  return { id, name, price, priceAmount, description, features, notIncluded, badge, popular };
+}
+
+function normalizeLane(v: unknown): PublicLane | null {
+  if (!isRecord(v)) return null;
+  const id = typeof v.id === "string" ? v.id : String(v.id ?? "");
+  const name = typeof v.name === "string" ? v.name : String(v.name ?? "");
+  const description = typeof v.description === "string" ? v.description : String(v.description ?? "");
+  const priceText = typeof v.priceText === "string" ? v.priceText : String(v.priceText ?? "");
+  const priceAmount = typeof v.priceAmount === "number" ? v.priceAmount : 0;
+  if (!id || !name) return null;
+  return { id, name, description, priceText, priceAmount };
 }
 
 function normalizeFaq(v: unknown): PublicFaq | null {
@@ -95,121 +117,25 @@ function normalizeComparisonRow(v: unknown): PublicComparisonRow | null {
   return { id, feature: feature.trim(), values };
 }
 
-const fallbackPlans: UiPlan[] = [
-  {
-    id: "basic",
-    name: "Basic",
-    badge: null,
-    popular: false,
-    color: "border-[#8B7EC8]",
-    headerColor: "bg-[#F8F8FD]",
-    textColor: "text-[#3D35A8]",
-    buttonClass: "border-2 border-[#3D35A8] text-[#3D35A8] hover:bg-[#3D35A8] hover:text-white",
-    price: "Rp 350.000",
-    priceNote: "per naskah",
-    description: "Ideal untuk jurnal yang sudah siap dengan koreksi dasar",
-    features: ["Editing grammar & struktur dasar", "Proofreading menyeluruh", "1x revisi gratis", "Format referensi dasar", "Feedback umum", "Estimasi 3–5 hari kerja"],
-    notIncluded: ["Formatting template jurnal", "Translasi", "Konsultasi jurnal target"],
-  },
-  {
-    id: "standard",
-    name: "Standard",
-    badge: "Paling Populer",
-    popular: true,
-    color: "border-[#3D35A8]",
-    headerColor: "bg-gradient-to-br from-[#3D35A8] to-[#5B50C8]",
-    textColor: "text-white",
-    buttonClass: "bg-gradient-to-r from-[#3D35A8] to-[#00BCEF] text-white hover:shadow-lg hover:shadow-[#3D35A8]/40",
-    price: "Rp 750.000",
-    priceNote: "per naskah",
-    description: "Paket lengkap editing dan formatting siap submit",
-    features: [
-      "Editing mendalam & grammar",
-      "Academic tone improvement",
-      "2x revisi gratis",
-      "Formatting template jurnal",
-      "Sitasi APA/IEEE/Vancouver",
-      "Formatting tabel & gambar",
-      "Konsultasi singkat jurnal target",
-      "Estimasi 5–7 hari kerja",
-    ],
-    notIncluded: ["Translasi bahasa", "Pendampingan submit"],
-  },
-  {
-    id: "premium",
-    name: "Premium",
-    badge: "Terlengkap",
-    popular: false,
-    color: "border-[#00BCEF]",
-    headerColor: "bg-gradient-to-br from-[#1C2237] to-[#2A1F5C]",
-    textColor: "text-white",
-    buttonClass: "bg-gradient-to-r from-[#00BCEF] to-[#3D35A8] text-white hover:shadow-lg hover:shadow-[#00BCEF]/40",
-    price: "Rp 1.500.000",
-    priceNote: "per naskah",
-    description: "Full service dari editing hingga jurnal diterima",
-    features: [
-      "Full editing & proofreading",
-      "Academic tone & clarity",
-      "Revisi intensif (unlimited)",
-      "Formatting lengkap",
-      "Translasi jika diperlukan",
-      "Konsultasi jurnal target",
-      "Cover letter profesional",
-      "Pendampingan upload & submit",
-      "Respon revisi reviewer",
-      "Follow-up hingga accepted",
-    ],
-    notIncluded: [],
-  },
-];
-
-const fallbackFaqs = [
-  {
-    q: "Apakah harga bisa disesuaikan dengan kebutuhan?",
-    a: "Ya, kami juga menyediakan paket custom sesuai kebutuhan spesifik Anda. Hubungi kami via WhatsApp untuk diskusi lebih lanjut.",
-  },
-  {
-    q: "Bagaimana metode pembayaran?",
-    a: "Kami menerima transfer bank, e-wallet (GoPay, OVO, Dana), dan virtual account. DP 50% di awal, pelunasan setelah selesai.",
-  },
-  {
-    q: "Apakah ada garansi jika jurnal ditolak?",
-    a: "Untuk paket Premium, kami menyediakan pendampingan revisi setelah penolakan tanpa biaya tambahan.",
-  },
-  {
-    q: "Berapa lama estimasi penyelesaian?",
-    a: "Basic: 3–5 hari, Standard: 5–7 hari, Premium: 7–14 hari tergantung panjang naskah dan kompleksitas.",
-  },
-];
-
-const fallbackComparisonRows: Array<Omit<PublicComparisonRow, "id"> & { id: string }> = [
-  { id: "1", feature: "Editing & Proofreading", values: [true, true, true] },
-  { id: "2", feature: "Academic Tone", values: ["Dasar", true, true] },
-  { id: "3", feature: "Jumlah Revisi", values: ["1x", "2x", "Unlimited"] },
-  { id: "4", feature: "Formatting Template", values: [false, true, true] },
-  { id: "5", feature: "Sitasi & Referensi", values: ["Dasar", true, true] },
-  { id: "6", feature: "Tabel & Gambar", values: [false, true, true] },
-  { id: "7", feature: "Translasi", values: [false, false, "Opsional"] },
-  { id: "8", feature: "Konsultasi Jurnal Target", values: [false, "Singkat", true] },
-  { id: "9", feature: "Cover Letter", values: [false, false, true] },
-  { id: "10", feature: "Pendampingan Submit", values: [false, false, true] },
-  { id: "11", feature: "Revisi Reviewer", values: [false, false, true] },
+const planColors = [
+  { border: "border-[#8B7EC8]", headerColor: "bg-[#F8F8FD]", textColor: "text-[#3D35A8]", buttonClass: "border-2 border-[#3D35A8] text-[#3D35A8] hover:bg-[#3D35A8] hover:text-white" },
+  { border: "border-[#3D35A8]", headerColor: "bg-gradient-to-br from-[#3D35A8] to-[#5B50C8]", textColor: "text-white", buttonClass: "bg-gradient-to-r from-[#3D35A8] to-[#00BCEF] text-white hover:shadow-lg hover:shadow-[#3D35A8]/40" },
+  { border: "border-[#00BCEF]", headerColor: "bg-gradient-to-br from-[#1C2237] to-[#2A1F5C]", textColor: "text-white", buttonClass: "bg-gradient-to-r from-[#00BCEF] to-[#3D35A8] text-white hover:shadow-lg hover:shadow-[#00BCEF]/40" },
+  { border: "border-[#F59E0B]", headerColor: "bg-gradient-to-br from-[#F59E0B] to-[#D97706]", textColor: "text-white", buttonClass: "bg-gradient-to-r from-[#F59E0B] to-[#B45309] text-white hover:shadow-lg hover:shadow-[#F59E0B]/40" },
 ];
 
 export default function Pricing() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [loadingPlans, setLoadingPlans] = useState(true);
 
-  const [faqs, setFaqs] = useState(fallbackFaqs);
-
-  const fallbackByName = useMemo(() => {
-    const m = new Map<string, UiPlan>();
-    for (const p of fallbackPlans) m.set(p.name.toLowerCase(), p);
-    return m;
-  }, []);
-
-  const [plans, setPlans] = useState<UiPlan[]>(fallbackPlans);
+  const [faqs, setFaqs] = useState<{ q: string; a: string }[]>([]);
+  const [plans, setPlans] = useState<UiPlan[]>([]);
+  const [lanes, setLanes] = useState<PublicLane[]>([]);
   const [comparisonRows, setComparisonRows] = useState<PublicComparisonRow[]>([]);
+
+  // Order Modal State
+  const [selectedPlan, setSelectedPlan] = useState<UiPlan | null>(null);
+  const [selectedLaneId, setSelectedLaneId] = useState<string>("");
 
   useEffect(() => {
     let alive = true;
@@ -221,58 +147,72 @@ export default function Pricing() {
         if (!Array.isArray(json)) throw new Error("Invalid response");
 
         const normalized = json.map(normalizeProduct).filter((p): p is PublicProduct => p !== null);
-        const mapped: UiPlan[] = normalized.map((p) => {
-          const fb = fallbackByName.get(p.name.toLowerCase());
-          const badge = p.badge?.trim() ? p.badge.trim() : p.popular ? "Paling Populer" : (fb?.badge ?? null);
+        const mapped: UiPlan[] = normalized.map((p, index) => {
+          const badge = p.badge?.trim() ? p.badge.trim() : p.popular ? "Paling Populer" : null;
+          const colorObj = planColors[index % planColors.length];
 
           return {
             id: p.id,
             name: p.name,
             badge,
             popular: p.popular,
-            color: fb?.color ?? "border-[#3D35A8]",
-            headerColor: fb?.headerColor ?? "bg-[#F8F8FD]",
-            textColor: fb?.textColor ?? "text-[#1C2237]",
-            buttonClass: fb?.buttonClass ?? "border-2 border-[#3D35A8] text-[#3D35A8] hover:bg-[#3D35A8] hover:text-white",
-            price: p.price || fb?.price || "",
-            priceNote: fb?.priceNote ?? "per naskah",
-            description: p.description || fb?.description || "",
-            features: p.features.length > 0 ? p.features : (fb?.features ?? []),
-            notIncluded: (p.notIncluded?.length ?? 0) > 0 ? (p.notIncluded as string[]) : (fb?.notIncluded ?? []),
+            color: colorObj.border,
+            headerColor: p.popular ? "bg-gradient-to-br from-[#3D35A8] to-[#5B50C8]" : colorObj.headerColor,
+            textColor: p.popular ? "text-white" : colorObj.textColor,
+            buttonClass: p.popular ? "bg-gradient-to-r from-[#3D35A8] to-[#00BCEF] text-white hover:shadow-lg" : colorObj.buttonClass,
+            price: p.price,
+            priceAmount: p.priceAmount,
+            priceNote: "per naskah",
+            description: p.description,
+            features: p.features,
+            notIncluded: p.notIncluded ?? [],
           };
         });
 
         if (alive && mapped.length > 0) setPlans(mapped);
       } catch {
-        // keep fallback
+        // empty
       } finally {
         if (alive) setLoadingPlans(false);
       }
     })();
-    return () => {
-      alive = false;
-    };
-  }, [fallbackByName]);
+    return () => { alive = false; };
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/lanes", { cache: "no-store" });
+        if (!res.ok) return;
+        const json = (await res.json()) as unknown;
+        if (!Array.isArray(json)) return;
+
+        const normalized = json.map(normalizeLane).filter((p): p is PublicLane => p !== null);
+        if (alive && normalized.length > 0) {
+          setLanes(normalized);
+          setSelectedLaneId(normalized[0].id); // default select first lane
+        }
+      } catch {
+        // empty
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
         const res = await fetch("/api/pricing-comparison", { cache: "no-store" });
-        if (!res.ok) throw new Error("Failed to load comparison rows");
+        if (!res.ok) return;
         const json = (await res.json()) as unknown;
-        if (!Array.isArray(json)) throw new Error("Invalid response");
-
+        if (!Array.isArray(json)) return;
         const normalized = json.map(normalizeComparisonRow).filter((r): r is PublicComparisonRow => r !== null);
-
         if (alive) setComparisonRows(normalized);
-      } catch {
-        if (alive) setComparisonRows(fallbackComparisonRows);
-      }
+      } catch { }
     })();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, []);
 
   useEffect(() => {
@@ -283,18 +223,26 @@ export default function Pricing() {
         if (!res.ok) return;
         const json = (await res.json()) as unknown;
         if (!Array.isArray(json)) return;
-
         const normalized = json.map(normalizeFaq).filter((f): f is PublicFaq => f !== null);
         const mapped = normalized.map((f) => ({ q: f.question, a: f.answer }));
         if (alive && mapped.length > 0) setFaqs(mapped);
-      } catch {
-        // keep fallback
-      }
+      } catch { }
     })();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, []);
+
+  const formatRupiah = (amount: number) => {
+    return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(amount);
+  };
+
+  const getWaLink = () => {
+    if (!selectedPlan) return waUrl;
+    const lane = lanes.find(l => l.id === selectedLaneId);
+    const laneName = lane ? lane.name : "";
+    const total = selectedPlan.priceAmount + (lane ? lane.priceAmount : 0);
+    const text = `Halo, saya tertarik dengan paket ${selectedPlan.name}${laneName ? ` dengan jalur ${laneName}` : ""}. Estimasi Total: ${formatRupiah(total)}.`;
+    return `/api/wa?text=${encodeURIComponent(text)}`;
+  };
 
   return (
     <div>
@@ -371,29 +319,18 @@ export default function Pricing() {
                   </div>
 
                   <div className="mt-8">
-                    <a
-                      href={`${waUrl}${encodeURIComponent(plan.name)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => setSelectedPlan(plan)}
                       className={`w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl font-semibold transition-all duration-300 hover:-translate-y-0.5 ${plan.buttonClass}`}
                     >
-                      Pesan via WhatsApp
+                      Pilih Paket Ini
                       <ArrowRight size={18} />
-                    </a>
+                    </button>
                   </div>
                 </div>
               </motion.div>
             ))}
           </div>
-
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mt-10 text-center">
-            <p className="text-gray-500 text-sm">
-              💡 Butuh paket custom?{" "}
-              <a href={waUrl + "Custom"} target="_blank" rel="noopener noreferrer" className="text-[#3D35A8] font-semibold hover:underline">
-                Hubungi kami untuk penawaran khusus
-              </a>
-            </p>
-          </motion.div>
         </div>
       </section>
 
@@ -468,6 +405,63 @@ export default function Pricing() {
           </div>
         </div>
       </section>
+
+      {/* Order Modal */}
+      <AnimatePresence>
+        {selectedPlan && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="font-bold text-xl text-[#1C2237]">Pilih Jalur Publikasi</h3>
+                <button onClick={() => setSelectedPlan(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-gray-500 transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto">
+                <div className="mb-6 p-4 rounded-2xl bg-gradient-to-br from-[#F8F8FD] to-[#F0EEFF] border border-[#3D35A8]/10">
+                  <p className="text-xs text-gray-500 font-medium mb-1">Paket Terpilih</p>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-[#3D35A8] text-lg">{selectedPlan.name}</span>
+                    <span className="font-semibold text-gray-700">{formatRupiah(selectedPlan.priceAmount)}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3 mb-8">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Tersedia {lanes.length} Jalur:</p>
+                  {lanes.map((lane) => (
+                    <label key={lane.id} className={`block p-4 rounded-2xl border-2 cursor-pointer transition-all ${selectedLaneId === lane.id ? "border-[#00BCEF] bg-[#00BCEF]/5" : "border-[#E8E8EE] hover:border-[#3D35A8]/30"}`}>
+                      <div className="flex items-start gap-3">
+                        <div className={`mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${selectedLaneId === lane.id ? "border-[#00BCEF]" : "border-gray-300"}`}>
+                          {selectedLaneId === lane.id && <div className="w-2.5 h-2.5 rounded-full bg-[#00BCEF]" />}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-bold text-[#1C2237]">{lane.name}</span>
+                            <span className={`font-semibold text-sm ${lane.priceAmount > 0 ? "text-[#3D35A8]" : "text-green-600"}`}>{lane.priceText}</span>
+                          </div>
+                          <p className="text-xs text-gray-500">{lane.description}</p>
+                        </div>
+                      </div>
+                      <input type="radio" name="lane" value={lane.id} checked={selectedLaneId === lane.id} onChange={() => setSelectedLaneId(lane.id)} className="hidden" />
+                    </label>
+                  ))}
+                </div>
+
+                <div className="bg-[#1C2237] rounded-2xl p-5 text-white">
+                  <p className="text-sm text-white/70 mb-1">Total Estimasi Harga</p>
+                  <div className="text-3xl font-bold text-[#00BCEF] mb-4">
+                    {formatRupiah(selectedPlan.priceAmount + (lanes.find(l => l.id === selectedLaneId)?.priceAmount || 0))}
+                  </div>
+                  <a href={getWaLink()} target="_blank" rel="noopener noreferrer" className="block w-full text-center py-3.5 bg-gradient-to-r from-[#00BCEF] to-[#3D35A8] rounded-xl font-bold shadow-lg hover:shadow-[#00BCEF]/40 transition-shadow">
+                    Lanjutkan ke WhatsApp
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
