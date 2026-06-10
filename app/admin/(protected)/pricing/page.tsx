@@ -73,9 +73,12 @@ function EditPlanModal({ plan, onSave, onClose }: { plan: AdminPricing | Omit<Ad
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">Harga Angka (Int)</label>
                 <input
-                  type="number"
-                  value={form.priceAmount}
-                  onChange={(e) => setForm({ ...form, priceAmount: parseInt(e.target.value) || 0 })}
+                  type="text"
+                  value={form.priceAmount === 0 ? "" : form.priceAmount}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "");
+                    setForm({ ...form, priceAmount: parseInt(val, 10) || 0 });
+                  }}
                   placeholder="350000"
                   className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-[#3D35A8]"
                 />
@@ -221,9 +224,12 @@ function EditLaneModal({ lane, onSave, onClose }: { lane: AdminPublicationLane |
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">Biaya Angka (Int)</label>
                 <input
-                  type="number"
-                  value={form.priceAmount}
-                  onChange={(e) => setForm({ ...form, priceAmount: parseInt(e.target.value) || 0 })}
+                  type="text"
+                  value={form.priceAmount === 0 ? "" : form.priceAmount}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "");
+                    setForm({ ...form, priceAmount: parseInt(val, 10) || 0 });
+                  }}
                   placeholder="350000"
                   className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:border-[#3D35A8]"
                 />
